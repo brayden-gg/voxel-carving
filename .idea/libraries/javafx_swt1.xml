@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="javafx-swt1">
+    <CLASSES>
+      <root url="jar:///usr/local/Cellar/javafx-sdk-18/lib/javafx-swt.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

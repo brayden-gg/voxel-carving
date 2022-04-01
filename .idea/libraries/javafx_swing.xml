@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="javafx.swing">
+    <CLASSES>
+      <root url="jar:///usr/local/Cellar/javafx-sdk-18/lib/javafx.swing.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

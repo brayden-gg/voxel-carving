@@ -6,7 +6,7 @@ public class Ray {
     // TODO: use actual vectors later
 //    PVector dir;
 //    PVector off;
-    double dirx, diry, dirz, offx, offy, offz;
+    private double dirx, diry, dirz, offx, offy, offz;
 //    public Ray(PVector off, PVector dir){
 //        this.dir = dir;
 //        this.off = off;
@@ -25,7 +25,7 @@ public class Ray {
     }
 
     // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-    boolean intersects(Box c){
+    public boolean intersects(Box c){
         double cs = c.getHeight();
         double cx = c.getTranslateX() - cs / 2;
         double cy = c.getTranslateY() - cs / 2;

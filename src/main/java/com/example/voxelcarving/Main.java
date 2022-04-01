@@ -10,26 +10,28 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 
+import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.shape.CullFace;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
 import javafx.scene.input.*;
-import java.io.IOException;
-import java.util.*;
-import java.nio.*;
-import org.opencv.core.*;
-import org.opencv.imgproc.*;
-import org.opencv.utils.*;
-import java.awt.image.BufferedImage;
 
+import javax.imageio.ImageIO;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.util.*;
 
 public class Main extends Application {
 
@@ -58,7 +60,6 @@ public class Main extends Application {
             return;
         }
 
-//        Box box = new Box(100,100,100);
 
         Group group = new Group();
         group.translateXProperty().set(WIDTH / 2.0);
@@ -71,7 +72,30 @@ public class Main extends Application {
         scene.setFill(Color.BLUE);
         scene.setCamera(camera);
 
-        createVoxelGrid(group, scene);
+
+
+
+        Box image = getImagePlane("kevin.PNG");
+        image.setTranslateZ(100);
+        group.getChildren().add(image);
+
+        VoxelGrid voxels = new VoxelGrid(RES, SIZE);
+
+        calculateVoxels(scene, group, image, voxels);
+
+        scene.setOnMouseMoved(event -> {
+            double mouseX = event.getSceneX() - WIDTH / 2;
+            double mouseY = event.getSceneY() - WIDTH / 2;
+            double theta = mouseX;
+            image.setTranslateX(Math.cos(theta / 180.0 * Math.PI) * mouseY);
+            image.setTranslateZ(Math.sin(-theta / 180.0 * Math.PI) * mouseY);
+            image.setRotationAxis(new Point3D(0, 1, 0));
+            image.setRotate(theta - 90);
+            calculateVoxels(scene, group, image, voxels);
+        });
+
+
+
         handleMouseDrag(group, scene, primaryStage);
 
         primaryStage.setScene(scene);
@@ -80,49 +104,50 @@ public class Main extends Application {
         primaryStage.show();
     }
 
-    private void createVoxelGrid(Group group, Scene scene) {
-        ArrayList<Ray> im1Rays = new ArrayList<Ray>();
-        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
-            for(int r = 0; r < 30; r += 5){
-                im1Rays.add(new Ray(r * Math.cos(theta), r * Math.sin(theta), 0, 0, 0, 1));
-            }
+    private Box getImagePlane(String fileName) {
+        try {
+            FileInputStream inputStream = new FileInputStream("src/main/resources/" + fileName);
+            Image image = new Image(inputStream);
+            double aspectRatio = image.getWidth() / (double) image.getHeight();
+            Box imagePlane = new Box(SIZE * RES * aspectRatio, SIZE * RES, 1);
+            PhongMaterial imageMaterial = new PhongMaterial();
+            imageMaterial.setDiffuseMap(image);
+            imagePlane.setMaterial(imageMaterial);
+            return imagePlane;
+        } catch (Exception e) {
+            System.out.println("file: \n" + fileName + "\n not found!");
+            return new Box(10, 10, 10);
         }
 
-        ArrayList<Ray> im2Rays = new ArrayList<Ray>();
-        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
-            for(int r = 0; r < 30; r += 5){
-                im2Rays.add(new Ray(-50, r * Math.sin(theta), r * Math.cos(theta), 1, 0, 0));
-            }
-        }
+    }
+
+    private void calculateVoxels(Scene scene, Group group, Box imagePlane, VoxelGrid voxels) {
+        Group voxelGroup = new Group();
+//        ArrayList<Ray> im1Rays = new ArrayList<Ray>();
+//        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
+//            for(int r = 0; r < 30; r += 5){
+//                im1Rays.add(new Ray(r * Math.cos(theta), r * Math.sin(theta), 0, 0, 0, 1));
+//            }
+//        }
+//
+//        ArrayList<Ray> im2Rays = new ArrayList<Ray>();
+//        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
+//            for(int r = 0; r < 30; r += 5){
+//                im2Rays.add(new Ray(-50, r * Math.sin(theta), r * Math.cos(theta), 1, 0, 0));
+//            }
+//        }
+
+
+//        voxels.castRays(im1Rays);
+//        voxels.castRays(im2Rays);
+        voxels.correlateVoxels(imagePlane);
+        voxels.addAllToGroup(voxelGroup);
 
 
 
-
-
-
-        scene.setOnMouseMoved(event -> {
-            double mouseX = event.getSceneX();
-            double mouseY = event.getSceneY();
-            ArrayList<Ray> im3Rays = new ArrayList<Ray>();
-            for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
-                for(int r = 0; r < 30; r += 5){
-                    im3Rays.add(new Ray(
-                            r * Math.cos(theta) * (Math.cos(mouseX / 100.0) + Math.sin(mouseX/ 100.0)) +  Math.sin(mouseX/ 100.0 - Math.PI/4),
-                            r * Math.sin(theta),
-                            r * Math.cos(theta) * (Math.cos(mouseX / 100.0) - Math.sin(mouseX / 100.0)) +  Math.cos(mouseX/ 100.0 - Math.PI/4),
-                            Math.sin(mouseX / 100.0), 0, Math.cos(mouseX / 100.0)));
-                }
-            }
-
-            VoxelGrid voxels = new VoxelGrid(RES, SIZE);
-            voxels.castRays(im1Rays);
-            voxels.castRays(im2Rays);
-            voxels.castRays(im3Rays);
-
-            voxels.addAllToGroup(group);
-        });
-
-
+        group.getChildren().clear();
+        group.getChildren().add(imagePlane);
+        group.getChildren().add(voxelGroup);
 
     }
 
