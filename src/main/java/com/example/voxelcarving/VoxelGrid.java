@@ -3,6 +3,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.paint.Color;
 
 import javafx.scene.paint.PhongMaterial;
@@ -15,6 +16,7 @@ import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 
 public class VoxelGrid { // conatiner for voxels
@@ -128,6 +130,7 @@ public class VoxelGrid { // conatiner for voxels
 
     public Voxel getCorrelation(Image[] images, PixelReader[] pixels, RealVector[] worldPoints, Projector[] projectors) {
         ArrayList<Color> foundColors = new ArrayList<Color>();
+//        ArrayList<RealVector> foundDescriptors = new ArrayList<RealVector>();
         for (int i = 0; i < images.length; i++){
             RealVector projectedPoint = projectors[i].projectPoint(worldPoints[i]);
 
@@ -136,6 +139,7 @@ public class VoxelGrid { // conatiner for voxels
 
             if (x < images[i].getWidth() && x >= 0 && y < images[i].getHeight() && y >= 0){ // in FOV of image
                 foundColors.add(pixels[i].getColor(x, y));
+//                foundDescriptors.add(getHOG(pixels[i], x, y));
             }
         }
 
@@ -146,36 +150,81 @@ public class VoxelGrid { // conatiner for voxels
         }
 
 
-        RealVector avgCol = new ArrayRealVector(3);
-
-        for (Color col : foundColors){
+        RealVector avgCol = new ArrayRealVector(4);
+//        RealVector avgDescriptor = new ArrayRealVector(8);
+        for (int i = 0; i < foundColors.size(); i++){
             avgCol = avgCol.add(new ArrayRealVector(new double[]{
-                    col.getRed(),
-                    col.getGreen(),
-                    col.getBlue()}));
+                    foundColors.get(i).getRed(),
+                    foundColors.get(i).getGreen(),
+                    foundColors.get(i).getBlue(),
+                    foundColors.get(i).getOpacity()}));
+
+//            avgDescriptor = avgDescriptor.add(foundDescriptors.get(i));
         }
 
         avgCol = avgCol.mapDivide(foundColors.size());
+//        avgDescriptor = avgDescriptor.mapDivide(foundColors.size());
 
         double avgDistance = 0;
-        for (Color col : foundColors){
+        for (int i = 0; i < foundColors.size(); i++){
             RealVector colVec = new ArrayRealVector(new double[]{
-                    col.getRed(),
-                    col.getGreen(),
-                    col.getBlue()});
+                    foundColors.get(i).getRed(),
+                    foundColors.get(i).getGreen(),
+                    foundColors.get(i).getBlue(),
+                    foundColors.get(i).getOpacity()});
 
-            avgDistance += colVec.getDistance(avgCol);
+            avgDistance += avgCol.getDistance(colVec);
+//            avgDistance += foundDescriptors.get(i).getDistance(avgDescriptor);
         }
 
         avgDistance /= foundColors.size();
 
         if (avgDistance < DISTANCE_THRESHOLD){
-            return new Voxel(true, Color.color(avgCol.getEntry(0), avgCol.getEntry(1), avgCol.getEntry(2)));
+            return new Voxel(true, Color.color(avgCol.getEntry(0), avgCol.getEntry(1), avgCol.getEntry(2), avgCol.getEntry(3)));
         }
 
         return new Voxel(false, Color.TRANSPARENT);
 
-
     }
+
+    // was an interesting idea but did not work at all
+    private RealVector getHOG(PixelReader pixels, int x, int y){
+        int sz = 4;
+        double[] mags = new double[sz * sz];
+        double[] dirs = new double[sz * sz];
+
+
+        int startX = x - x % sz;
+        int startY = y - y % sz;
+
+        for (int i = 0; i < sz; i++){
+            for (int j = 0; j < sz; j++){
+                if (startX + i >= 1920 || startY + j >= 1080 || startX == 0 || startY == 0){
+                    System.out.println("ERROR: (" + i + "," + j + ") >= (1820, 1080)");
+                    continue;
+                }
+                double gradX = pixels.getColor(startX + i, startY + j).getBrightness() - pixels.getColor(startX + i - 1, startY + j).getBrightness();
+                double gradY = pixels.getColor(startX + i, startY + j).getBrightness() - pixels.getColor(startX + i, startY + j - 1).getBrightness();
+                mags[i * sz + j] = Math.sqrt(gradX * gradX + gradY * gradY);
+                dirs[i * sz + j] = Math.atan2(gradY, gradX);
+            }
+        }
+
+
+        double[] bins = {0, 0, 0, 0, 0, 0, 0, 0};
+
+
+        for (int i = 0; i < mags.length; i++){
+            int index = (int)Math.floor(dirs[i] / (2 * Math.PI) * 8) + 4;
+            if (index >= 8 || index < 0){
+                index = 0;
+            }
+            bins[index] += mags[i];
+        }
+
+        return new ArrayRealVector(bins);
+    }
+
+
 
 }

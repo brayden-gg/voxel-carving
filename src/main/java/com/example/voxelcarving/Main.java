@@ -38,7 +38,7 @@ public class Main extends Application {
     private static final int WIDTH = 600;
     private static final int HEIGHT = 400;
 
-    private static final int RES = 40;
+    private static final int RES = 50;
     private static final double SIZE = 100.0 / RES;
 
     private double anchorX, anchorY;
@@ -74,45 +74,45 @@ public class Main extends Application {
 
 
         ArrayList<Box> images = new ArrayList<Box>();
-
-        Box leftImage = getImagePlane("triceratops/left.png");
+        String folderName = "triceratops";
+        Box leftImage = getImagePlane(folderName + "/left.png");
         leftImage.setTranslateX(-100);
         leftImage.setRotationAxis(new Point3D(0, 1, 0));
         leftImage.setRotate(90);
         images.add(leftImage);
 
-        Box frontLeftImage = getImagePlane("triceratops/front-left.png");
+        Box frontLeftImage = getImagePlane(folderName + "/front-left.png");
         frontLeftImage.setTranslateX(-100 * Math.sqrt(2) / 2);
         frontLeftImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
         frontLeftImage.setRotationAxis(new Point3D(0, 1, 0));
         frontLeftImage.setRotate(45);
         images.add(frontLeftImage);
 
-        Box frontImage = getImagePlane("triceratops/front.png");
+        Box frontImage = getImagePlane(folderName + "/front.png");
         frontImage.setTranslateZ(-100);
         images.add(frontImage);
 
-        Box frontRightImage = getImagePlane("triceratops/front-right.png");
+        Box frontRightImage = getImagePlane(folderName + "/front-right.png");
         frontRightImage.setTranslateX(100 * Math.sqrt(2) / 2);
         frontRightImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
         frontRightImage.setRotationAxis(new Point3D(0, 1, 0));
         frontRightImage.setRotate(-45);
         images.add(frontRightImage);
 
-        Box rightImage = getImagePlane("triceratops/right.png");
+        Box rightImage = getImagePlane(folderName + "/right.png");
         rightImage.setTranslateX(100);
         rightImage.setRotationAxis(new Point3D(0, 1, 0));
         rightImage.setRotate(-90);
         images.add(rightImage);
 
-        Box frontTopImage = getImagePlane("triceratops/front-top.png");
+        Box frontTopImage = getImagePlane(folderName + "/front-top.png");
         frontTopImage.setTranslateZ(-100 * Math.cos(Math.PI / 8));
         frontTopImage.setTranslateY(-100 * Math.sin(Math.PI / 8));
         frontTopImage.setRotationAxis(new Point3D(1, 0, 0));
         frontTopImage.setRotate(-22.5);
         images.add(frontTopImage);
 
-        Box topImage = getImagePlane("triceratops/top.png");
+        Box topImage = getImagePlane(folderName + "/top.png");
         topImage.setTranslateZ(-100 * Math.cos(Math.PI / 4));
         topImage.setTranslateY(-100 * Math.sin(Math.PI / 4));
         topImage.setRotationAxis(new Point3D(1, 0, 0));
