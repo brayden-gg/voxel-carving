@@ -9,16 +9,19 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.*;
 import javafx.scene.shape.CullFace;
+import javafx.scene.transform.Rotate;
 import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 
 import java.util.*;
 
 public class VoxelGrid { // conatiner for voxels
-    int res;
-    double size;
-    Voxel[][][] grid;
+    private int res;
+    private double size;
+    private Voxel[][][] grid;
+    private final double DISTANCE_THRESHOLD = 0.15;
 
     public VoxelGrid(int res, double size, Voxel[][][] grid){
         this.res = res;
@@ -31,7 +34,7 @@ public class VoxelGrid { // conatiner for voxels
         for (int i = 0; i < res; i++) {
             for (int j = 0; j < res; j++) {
                 for (int k = 0; k < res; k++) {
-                    this.grid[i][j][k] = new Voxel(true, Color.rgb(i * 255/res, j * 255/res, k * 255/res, 0.3));
+                    this.grid[i][j][k] = new Voxel(false, Color.rgb(i * 255/res, j * 255/res, k * 255/res, 0.3));
                 }
             }
         }
@@ -64,9 +67,9 @@ public class VoxelGrid { // conatiner for voxels
     }
 
     public void castRays(ArrayList<Ray> rays) { // fills in only boxes touched by rays
-        for (int i = 0; i < this.res; i++) {
-            for (int j = 0; j < this.res; j++) {
-                for (int k = 0; k < this.res; k++) {
+        for (int i = 0; i < res; i++) {
+            for (int j = 0; j < res; j++) {
+                for (int k = 0; k < res; k++) {
                     boolean hit = false;
                     Box cube = this.getCube(i, j, k);
                     for (Ray ray : rays){
@@ -78,46 +81,101 @@ public class VoxelGrid { // conatiner for voxels
         }
     }
 
-    public void correlateVoxels(Box plane){
-        PhongMaterial material = (PhongMaterial)plane.getMaterial();
-        Image image = material.getDiffuseMap();
+    public void correlateVoxels(ArrayList<Box> planes){
+        Image[] images = new Image[planes.size()];
+        Projector[] projectors = new Projector[planes.size()];
+        PixelReader[] pixels = new PixelReader[planes.size()];
 
-        PixelReader pixels = image.getPixelReader();
+        for (int i = 0; i < planes.size(); i++) {
+            Box plane = planes.get(i);
+            PhongMaterial material = (PhongMaterial) plane.getMaterial();
+            Image image = material.getDiffuseMap();
+            images[i] = image;
+            pixels[i] = image.getPixelReader();
 
-        double rotationAngle = plane.getRotate() / 180.0 * Math.PI;
+            double rotationAngle = plane.getRotate() / 180.0 * Math.PI;
 
+            RealVector position = new ArrayRealVector(new double[]{plane.getTranslateX(), plane.getTranslateY(), plane.getTranslateZ()});
+            Rotate rotate = new Rotate(plane.getRotate(), plane.getRotationAxis());
+            RealMatrix rotation = MatrixUtils.createRealMatrix(new double[][]
+                            {{rotate.getMxx(), rotate.getMxy(), rotate.getMxz()},
+                            {rotate.getMyx(), rotate.getMyy(), rotate.getMyz()},
+                            {rotate.getMzx(), rotate.getMzy(), rotate.getMzz()}});
+            projectors[i] = new Projector(position, rotation,
+                    image.getWidth() / 2, image.getHeight() / 2,
+                    image.getWidth() / 2);
+        }
 
-        Projector projector = new Projector(
-                plane.getTranslateX(), plane.getTranslateY(), plane.getTranslateZ(),
-                0, rotationAngle, 0,
-                plane.getWidth() / 2, plane.getHeight() / 2,
-                300);
-
-        for (int i = 0; i < this.res; i++) {
-            for (int j = 0; j < this.res; j++) {
-                for (int k = 0; k < this.res; k++) {
+        for (int i = 0; i < res; i++) {
+            for (int j = 0; j < res; j++) {
+                for (int k = 0; k < res; k++) {
                     Box cube = this.getCube(i, j, k);
-                    RealVector worldPoint = new ArrayRealVector(new double[]{
-                            cube.getTranslateX(),
-                            cube.getTranslateY(),
-                            cube.getTranslateZ()});
-                    RealVector projectedPoint = projector.projectPoint(worldPoint);
+                    RealVector[] worldPoints = new RealVector[images.length];
 
-                    int x = (int)Math.round(projectedPoint.getEntry(0));
-                    int y = (int)Math.round(projectedPoint.getEntry(1));
-
-                    Color color;
-
-                    if (x >= image.getWidth() || x < 0 || y >= image.getHeight() || y < 0){
-                        color = Color.TRANSPARENT;
-                    } else {
-                        color = pixels.getColor(x, y);
+                    for (int l = 0; l < images.length; l++) {
+                        worldPoints[l] = new ArrayRealVector(new double[]{
+                                cube.getTranslateX(),
+                                cube.getTranslateY(),
+                                cube.getTranslateZ()});
                     }
 
-                    this.grid[i][j][k].setColor(color);
+                    this.grid[i][j][k] = getCorrelation(images, pixels, worldPoints, projectors);
+
                 }
             }
         }
+    }
+
+    public Voxel getCorrelation(Image[] images, PixelReader[] pixels, RealVector[] worldPoints, Projector[] projectors) {
+        ArrayList<Color> foundColors = new ArrayList<Color>();
+        for (int i = 0; i < images.length; i++){
+            RealVector projectedPoint = projectors[i].projectPoint(worldPoints[i]);
+
+            int x = (int) Math.round(projectedPoint.getEntry(0));
+            int y = (int) Math.round(projectedPoint.getEntry(1));
+
+            if (x < images[i].getWidth() && x >= 0 && y < images[i].getHeight() && y >= 0){ // in FOV of image
+                foundColors.add(pixels[i].getColor(x, y));
+            }
+        }
+
+
+
+        if (foundColors.size() < 2){
+            return new Voxel(false, Color.TRANSPARENT);
+        }
+
+
+        RealVector avgCol = new ArrayRealVector(3);
+
+        for (Color col : foundColors){
+            avgCol = avgCol.add(new ArrayRealVector(new double[]{
+                    col.getRed(),
+                    col.getGreen(),
+                    col.getBlue()}));
+        }
+
+        avgCol = avgCol.mapDivide(foundColors.size());
+
+        double avgDistance = 0;
+        for (Color col : foundColors){
+            RealVector colVec = new ArrayRealVector(new double[]{
+                    col.getRed(),
+                    col.getGreen(),
+                    col.getBlue()});
+
+            avgDistance += colVec.getDistance(avgCol);
+        }
+
+        avgDistance /= foundColors.size();
+
+        if (avgDistance < DISTANCE_THRESHOLD){
+            return new Voxel(true, Color.color(avgCol.getEntry(0), avgCol.getEntry(1), avgCol.getEntry(2)));
+        }
+
+        return new Voxel(false, Color.TRANSPARENT);
+
+
     }
 
 }

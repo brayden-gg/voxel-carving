@@ -38,7 +38,7 @@ public class Main extends Application {
     private static final int WIDTH = 600;
     private static final int HEIGHT = 400;
 
-    private static final int RES = 20;
+    private static final int RES = 40;
     private static final double SIZE = 100.0 / RES;
 
     private double anchorX, anchorY;
@@ -73,26 +73,70 @@ public class Main extends Application {
         scene.setCamera(camera);
 
 
+        ArrayList<Box> images = new ArrayList<Box>();
 
+        Box leftImage = getImagePlane("triceratops/left.png");
+        leftImage.setTranslateX(-100);
+        leftImage.setRotationAxis(new Point3D(0, 1, 0));
+        leftImage.setRotate(90);
+        images.add(leftImage);
 
-        Box image = getImagePlane("kevin.PNG");
-        image.setTranslateZ(100);
-        group.getChildren().add(image);
+        Box frontLeftImage = getImagePlane("triceratops/front-left.png");
+        frontLeftImage.setTranslateX(-100 * Math.sqrt(2) / 2);
+        frontLeftImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
+        frontLeftImage.setRotationAxis(new Point3D(0, 1, 0));
+        frontLeftImage.setRotate(45);
+        images.add(frontLeftImage);
+
+        Box frontImage = getImagePlane("triceratops/front.png");
+        frontImage.setTranslateZ(-100);
+        images.add(frontImage);
+
+        Box frontRightImage = getImagePlane("triceratops/front-right.png");
+        frontRightImage.setTranslateX(100 * Math.sqrt(2) / 2);
+        frontRightImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
+        frontRightImage.setRotationAxis(new Point3D(0, 1, 0));
+        frontRightImage.setRotate(-45);
+        images.add(frontRightImage);
+
+        Box rightImage = getImagePlane("triceratops/right.png");
+        rightImage.setTranslateX(100);
+        rightImage.setRotationAxis(new Point3D(0, 1, 0));
+        rightImage.setRotate(-90);
+        images.add(rightImage);
+
+        Box frontTopImage = getImagePlane("triceratops/front-top.png");
+        frontTopImage.setTranslateZ(-100 * Math.cos(Math.PI / 8));
+        frontTopImage.setTranslateY(-100 * Math.sin(Math.PI / 8));
+        frontTopImage.setRotationAxis(new Point3D(1, 0, 0));
+        frontTopImage.setRotate(-22.5);
+        images.add(frontTopImage);
+
+        Box topImage = getImagePlane("triceratops/top.png");
+        topImage.setTranslateZ(-100 * Math.cos(Math.PI / 4));
+        topImage.setTranslateY(-100 * Math.sin(Math.PI / 4));
+        topImage.setRotationAxis(new Point3D(1, 0, 0));
+        topImage.setRotate(-45);
+        images.add(topImage);
+
 
         VoxelGrid voxels = new VoxelGrid(RES, SIZE);
 
-        calculateVoxels(scene, group, image, voxels);
+        calculateVoxels(scene, group, images, voxels);
 
-        scene.setOnMouseMoved(event -> {
-            double mouseX = event.getSceneX() - WIDTH / 2;
-            double mouseY = event.getSceneY() - WIDTH / 2;
-            double theta = mouseX;
-            image.setTranslateX(Math.cos(theta / 180.0 * Math.PI) * mouseY);
-            image.setTranslateZ(Math.sin(-theta / 180.0 * Math.PI) * mouseY);
-            image.setRotationAxis(new Point3D(0, 1, 0));
-            image.setRotate(theta - 90);
-            calculateVoxels(scene, group, image, voxels);
-        });
+//        scene.setOnMouseMoved(event -> {
+//            double mouseX = event.getSceneX() - WIDTH / 2;
+//            double mouseY = event.getSceneY() - WIDTH / 2;
+//            image.setTranslateX(mouseX);
+//            image.setTranslateZ(mouseY);
+//            System.out.println(mouseX + ", " + mouseY);
+////            double theta = mouseX;
+////            image.setTranslateX(Math.cos(theta / 180.0 * Math.PI) * mouseY);
+////            image.setTranslateZ(Math.sin(-theta / 180.0 * Math.PI) * mouseY);
+////            image.setRotationAxis(new Point3D(0, 1, 0));
+////            image.setRotate(theta - 90);
+//            calculateVoxels(scene, group, image, voxels);
+//        });
 
 
 
@@ -109,7 +153,7 @@ public class Main extends Application {
             FileInputStream inputStream = new FileInputStream("src/main/resources/" + fileName);
             Image image = new Image(inputStream);
             double aspectRatio = image.getWidth() / (double) image.getHeight();
-            Box imagePlane = new Box(SIZE * RES * aspectRatio, SIZE * RES, 1);
+            Box imagePlane = new Box(SIZE * RES, SIZE * RES / aspectRatio, 1);
             PhongMaterial imageMaterial = new PhongMaterial();
             imageMaterial.setDiffuseMap(image);
             imagePlane.setMaterial(imageMaterial);
@@ -121,7 +165,7 @@ public class Main extends Application {
 
     }
 
-    private void calculateVoxels(Scene scene, Group group, Box imagePlane, VoxelGrid voxels) {
+    private void calculateVoxels(Scene scene, Group group, ArrayList<Box> imagePlanes, VoxelGrid voxels) {
         Group voxelGroup = new Group();
 //        ArrayList<Ray> im1Rays = new ArrayList<Ray>();
 //        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
@@ -140,13 +184,16 @@ public class Main extends Application {
 
 //        voxels.castRays(im1Rays);
 //        voxels.castRays(im2Rays);
-        voxels.correlateVoxels(imagePlane);
+        voxels.correlateVoxels(imagePlanes);
         voxels.addAllToGroup(voxelGroup);
 
 
 
         group.getChildren().clear();
-        group.getChildren().add(imagePlane);
+
+        for (Box plane : imagePlanes) {
+            group.getChildren().add(plane);
+        }
         group.getChildren().add(voxelGroup);
 
     }

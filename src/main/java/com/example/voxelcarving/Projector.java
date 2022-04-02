@@ -11,18 +11,35 @@ import java.awt.image.BufferedImage;
 import org.apache.commons.math3.linear.*;
 
 public class Projector {
-    double x, y, z, rx, ry, rz, u, v, f;
+    RealMatrix intrinsic;
+    RealMatrix extrinsic;
     public Projector(double x, double y, double z, double rx, double ry, double rz, double u, double v, double f) {
-//        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.rx = rx;
-        this.ry = ry;
-        this.rz = rz;
-        this.u = u;
-        this.v = v;
-        this.f = f;
+        intrinsic = MatrixUtils.createRealMatrix(new double[][]
+                        {{f, 0.0, u},
+                        {0.0, f, v},
+                        {0.0, 0.0, 1.0}});
+
+        RealMatrix rotation = Projector.rotationMatrix(rx, ry, rz).transpose();
+        RealVector relativePosition = new ArrayRealVector(new double[]{x, y, z});
+        RealVector globalPosition = rotation.operate(relativePosition).mapMultiply(-1);
+
+        extrinsic = new Array2DRowRealMatrix(3, 4);
+        extrinsic.setSubMatrix(rotation.getData(), 0, 0);
+        extrinsic.setColumnVector(3, globalPosition);
+    }
+
+    public Projector(RealVector relativePosition, RealMatrix rotation, double u, double v, double f){
+        intrinsic = MatrixUtils.createRealMatrix(new double[][]
+                        {{f, 0.0, u},
+                        {0.0, f, v},
+                        {0.0, 0.0, 1.0}});
+
+        rotation = rotation.transpose();
+        RealVector globalPosition = rotation.operate(relativePosition).mapMultiply(-1);
+
+        extrinsic = new Array2DRowRealMatrix(3, 4);
+        extrinsic.setSubMatrix(rotation.getData(), 0, 0);
+        extrinsic.setColumnVector(3, globalPosition);
     }
 
     public RealVector projectPoint(RealVector pt) {
@@ -37,29 +54,7 @@ public class Projector {
 
 
     public RealMatrix getProjectionMatrix() {
-        RealMatrix intrinsic = MatrixUtils.createRealMatrix(new double[][]
-                {{f, 0.0, u},
-                {0.0, -f, v},
-                {0.0, 0.0, 1.0}});
-        RealMatrix rotation = Projector.rotationMatrix(rx, ry, rz).transpose();
-        RealVector relativePosition = new ArrayRealVector(new double[]{x, y, z});
-        RealVector globalPosition = rotation.operate(relativePosition).mapMultiply(-1);
-
-        RealMatrix extrinsic = new Array2DRowRealMatrix(3, 4);
-        extrinsic.setSubMatrix(rotation.getData(), 0, 0);
-        extrinsic.setColumnVector(3, globalPosition);
-
         return intrinsic.multiply(extrinsic);
-    }
-
-    public RealVector cameraDirection() {
-        return angleToVec(rx, ry, rz);
-    }
-
-    public RealVector angleToVec(double alpha, double beta, double gamma) {
-        RealMatrix rotation = Projector.rotationMatrix(alpha, beta, gamma);
-        RealVector originalVec = new ArrayRealVector(new double[]{0, 0, 1});
-        return rotation.operate(originalVec);
     }
 
     public static RealMatrix rotationMatrix(double alpha, double beta, double gamma) {
