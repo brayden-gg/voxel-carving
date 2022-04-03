@@ -28,7 +28,7 @@
     <orderEntry type="library" name="javafx.base" level="project" />
     <orderEntry type="library" name="javafx-swt1" level="project" />
     <orderEntry type="library" name="opencv-455" level="project" />
-    <orderEntry type="library" name="commons-math3-3.6.1" level="project" />
     <orderEntry type="library" name="opencv4" level="project" />
+    <orderEntry type="library" name="commons-math3-3.6.1" level="project" />
   </component>
 </module>
