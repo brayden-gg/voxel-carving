@@ -11,6 +11,7 @@ import javafx.scene.shape.Box;
 import javafx.scene.*;
 import javafx.scene.shape.CullFace;
 import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Transform;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -23,7 +24,6 @@ public class VoxelGrid { // conatiner for voxels
     private int res;
     private double size;
     private Voxel[][][] grid;
-    private final double DISTANCE_THRESHOLD = 0.15;
 
     public VoxelGrid(int res, double size, Voxel[][][] grid){
         this.res = res;
@@ -83,27 +83,21 @@ public class VoxelGrid { // conatiner for voxels
         }
     }
 
-    public void correlateVoxels(ArrayList<Box> planes){
+    public void correlateVoxels(ArrayList<ImagePlane> planes){
         Image[] images = new Image[planes.size()];
         Projector[] projectors = new Projector[planes.size()];
         PixelReader[] pixels = new PixelReader[planes.size()];
 
         for (int i = 0; i < planes.size(); i++) {
-            Box plane = planes.get(i);
+            ImagePlane imagePlane = planes.get(i);
+            Box plane = imagePlane.plane;
             PhongMaterial material = (PhongMaterial) plane.getMaterial();
             Image image = material.getDiffuseMap();
             images[i] = image;
             pixels[i] = image.getPixelReader();
 
-            double rotationAngle = plane.getRotate() / 180.0 * Math.PI;
-
-            RealVector position = new ArrayRealVector(new double[]{plane.getTranslateX(), plane.getTranslateY(), plane.getTranslateZ()});
-            Rotate rotate = new Rotate(plane.getRotate(), plane.getRotationAxis());
-            RealMatrix rotation = MatrixUtils.createRealMatrix(new double[][]
-                            {{rotate.getMxx(), rotate.getMxy(), rotate.getMxz()},
-                            {rotate.getMyx(), rotate.getMyy(), rotate.getMyz()},
-                            {rotate.getMzx(), rotate.getMzy(), rotate.getMzz()}});
-            projectors[i] = new Projector(position, rotation,
+            projectors[i] = new Projector(0, 0, -imagePlane.r,
+                    -imagePlane.phi * Math.PI / 180, -imagePlane.theta * Math.PI / 180, Math.PI,
                     image.getWidth() / 2, image.getHeight() / 2,
                     image.getWidth() / 2);
         }
@@ -143,11 +137,9 @@ public class VoxelGrid { // conatiner for voxels
             }
         }
 
-
-
-        if (foundColors.size() < 2){
-            return new Voxel(false, Color.TRANSPARENT);
-        }
+//        if (foundColors.size() < 2){
+//            return new Voxel(false, Color.TRANSPARENT);
+//        }
 
 
         RealVector avgCol = new ArrayRealVector(4);
@@ -179,7 +171,7 @@ public class VoxelGrid { // conatiner for voxels
 
         avgDistance /= foundColors.size();
 
-        if (avgDistance < DISTANCE_THRESHOLD){
+        if (avgDistance < SceneConstants.TOLORANCE){
             return new Voxel(true, Color.color(avgCol.getEntry(0), avgCol.getEntry(1), avgCol.getEntry(2), avgCol.getEntry(3)));
         }
 

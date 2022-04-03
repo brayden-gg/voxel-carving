@@ -35,12 +35,6 @@ import java.util.*;
 
 public class Main extends Application {
 
-    private static final int WIDTH = 600;
-    private static final int HEIGHT = 400;
-
-    private static final int RES = 50;
-    private static final double SIZE = 100.0 / RES;
-
     private double anchorX, anchorY;
     private double anchorAngleX = 0;
     private double anchorAngleY = 0;
@@ -62,65 +56,64 @@ public class Main extends Application {
 
 
         Group group = new Group();
-        group.translateXProperty().set(WIDTH / 2.0);
-        group.translateYProperty().set(HEIGHT / 2.0);
-        group.translateZProperty().set(-100);
+        group.translateXProperty().set(SceneConstants.WIDTH / 2.0);
+        group.translateYProperty().set(SceneConstants.HEIGHT / 2.0);
+        group.translateZProperty().set(SceneConstants.IMAGE_DIST);
 
         PerspectiveCamera camera = new PerspectiveCamera();
 
-        Scene scene = new Scene(group, WIDTH, HEIGHT); // true);
+        Scene scene = new Scene(group, SceneConstants.WIDTH, SceneConstants.HEIGHT); // true);
         scene.setFill(Color.BLUE);
         scene.setCamera(camera);
 
 
-        ArrayList<Box> images = new ArrayList<Box>();
-        String folderName = "triceratops";
-        Box leftImage = getImagePlane(folderName + "/left.png");
-        leftImage.setTranslateX(-100);
-        leftImage.setRotationAxis(new Point3D(0, 1, 0));
-        leftImage.setRotate(90);
+        ArrayList<ImagePlane> images = new ArrayList<ImagePlane>();
+        ImagePlane leftImage = new ImagePlane(SceneConstants.FOLDER + "/left.png", -90, 0);
+//        leftImage.setTranslateX(-100);
+//        leftImage.setRotationAxis(new Point3D(0, 1, 0));
+//        leftImage.setRotate(90);
         images.add(leftImage);
 
-        Box frontLeftImage = getImagePlane(folderName + "/front-left.png");
-        frontLeftImage.setTranslateX(-100 * Math.sqrt(2) / 2);
-        frontLeftImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
-        frontLeftImage.setRotationAxis(new Point3D(0, 1, 0));
-        frontLeftImage.setRotate(45);
+        ImagePlane frontLeftImage = new ImagePlane(SceneConstants.FOLDER + "/front-left.png", -45, 0);
+//        frontLeftImage.setTranslateX(-100 * Math.sqrt(2) / 2);
+//        frontLeftImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
+//        frontLeftImage.setRotationAxis(new Point3D(0, 1, 0));
+//        frontLeftImage.setRotate(45);
         images.add(frontLeftImage);
 
-        Box frontImage = getImagePlane(folderName + "/front.png");
-        frontImage.setTranslateZ(-100);
+        ImagePlane frontImage = new ImagePlane(SceneConstants.FOLDER + "/front.png", 0, 0);
+//        frontImage.setTranslateZ(-100);
         images.add(frontImage);
 
-        Box frontRightImage = getImagePlane(folderName + "/front-right.png");
-        frontRightImage.setTranslateX(100 * Math.sqrt(2) / 2);
-        frontRightImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
-        frontRightImage.setRotationAxis(new Point3D(0, 1, 0));
-        frontRightImage.setRotate(-45);
+        ImagePlane frontRightImage = new ImagePlane(SceneConstants.FOLDER + "/front-right.png", 45, 0);
+//        frontRightImage.setTranslateX(100 * Math.sqrt(2) / 2);
+//        frontRightImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
+//        frontRightImage.setRotationAxis(new Point3D(0, 1, 0));
+//        frontRightImage.setRotate(-45);
         images.add(frontRightImage);
 
-        Box rightImage = getImagePlane(folderName + "/right.png");
-        rightImage.setTranslateX(100);
-        rightImage.setRotationAxis(new Point3D(0, 1, 0));
-        rightImage.setRotate(-90);
+        ImagePlane rightImage = new ImagePlane(SceneConstants.FOLDER + "/right.png", 90, 0);
+//        rightImage.setTranslateX(100);
+//        rightImage.setRotationAxis(new Point3D(0, 1, 0));
+//        rightImage.setRotate(-90);
         images.add(rightImage);
 
-        Box frontTopImage = getImagePlane(folderName + "/front-top.png");
-        frontTopImage.setTranslateZ(-100 * Math.cos(Math.PI / 8));
-        frontTopImage.setTranslateY(-100 * Math.sin(Math.PI / 8));
-        frontTopImage.setRotationAxis(new Point3D(1, 0, 0));
-        frontTopImage.setRotate(-22.5);
+        ImagePlane frontTopImage = new ImagePlane(SceneConstants.FOLDER + "/front-top.png", 0, 22.5);
+//        frontTopImage.setTranslateZ(-100 * Math.cos(Math.PI / 8));
+//        frontTopImage.setTranslateY(-100 * Math.sin(Math.PI / 8));
+//        frontTopImage.setRotationAxis(new Point3D(1, 0, 0));
+//        frontTopImage.setRotate(-22.5);
         images.add(frontTopImage);
 
-        Box topImage = getImagePlane(folderName + "/top.png");
-        topImage.setTranslateZ(-100 * Math.cos(Math.PI / 4));
-        topImage.setTranslateY(-100 * Math.sin(Math.PI / 4));
-        topImage.setRotationAxis(new Point3D(1, 0, 0));
-        topImage.setRotate(-45);
+        ImagePlane topImage = new ImagePlane(SceneConstants.FOLDER + "/top.png", 0, 45);
+//        topImage.setTranslateZ(-100 * Math.cos(Math.PI / 4));
+//        topImage.setTranslateY(-100 * Math.sin(Math.PI / 4));
+//        topImage.setRotationAxis(new Point3D(1, 0, 0));
+//        topImage.setRotate(-45);
         images.add(topImage);
 
 
-        VoxelGrid voxels = new VoxelGrid(RES, SIZE);
+        VoxelGrid voxels = new VoxelGrid(SceneConstants.RES, SceneConstants.SIZE);
 
         calculateVoxels(scene, group, images, voxels);
 
@@ -148,24 +141,9 @@ public class Main extends Application {
         primaryStage.show();
     }
 
-    private Box getImagePlane(String fileName) {
-        try {
-            FileInputStream inputStream = new FileInputStream("src/main/resources/" + fileName);
-            Image image = new Image(inputStream);
-            double aspectRatio = image.getWidth() / (double) image.getHeight();
-            Box imagePlane = new Box(SIZE * RES, SIZE * RES / aspectRatio, 1);
-            PhongMaterial imageMaterial = new PhongMaterial();
-            imageMaterial.setDiffuseMap(image);
-            imagePlane.setMaterial(imageMaterial);
-            return imagePlane;
-        } catch (Exception e) {
-            System.out.println("file: \n" + fileName + "\n not found!");
-            return new Box(10, 10, 10);
-        }
 
-    }
 
-    private void calculateVoxels(Scene scene, Group group, ArrayList<Box> imagePlanes, VoxelGrid voxels) {
+    private void calculateVoxels(Scene scene, Group group, ArrayList<ImagePlane> images, VoxelGrid voxels) {
         Group voxelGroup = new Group();
 //        ArrayList<Ray> im1Rays = new ArrayList<Ray>();
 //        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
@@ -184,15 +162,15 @@ public class Main extends Application {
 
 //        voxels.castRays(im1Rays);
 //        voxels.castRays(im2Rays);
-        voxels.correlateVoxels(imagePlanes);
+        voxels.correlateVoxels(images);
         voxels.addAllToGroup(voxelGroup);
 
 
 
         group.getChildren().clear();
 
-        for (Box plane : imagePlanes) {
-            group.getChildren().add(plane);
+        for (ImagePlane image : images) {
+            group.getChildren().add(image.plane);
         }
         group.getChildren().add(voxelGroup);
 

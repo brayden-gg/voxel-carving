@@ -4,6 +4,9 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.transform.MatrixType;
+import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Transform;
+import javafx.scene.transform.Translate;
 import org.opencv.core.*;
 import org.opencv.imgproc.*;
 import org.opencv.utils.*;
@@ -25,21 +28,28 @@ public class Projector {
 
         extrinsic = new Array2DRowRealMatrix(3, 4);
         extrinsic.setSubMatrix(rotation.getData(), 0, 0);
-        extrinsic.setColumnVector(3, globalPosition);
+        extrinsic.setColumnVector(3, relativePosition);
+
+        System.out.println(extrinsic);
     }
 
-    public Projector(RealVector relativePosition, RealMatrix rotation, double u, double v, double f){
+    public Projector(Transform transform, double u, double v, double f){
         intrinsic = MatrixUtils.createRealMatrix(new double[][]
                         {{f, 0.0, u},
                         {0.0, f, v},
                         {0.0, 0.0, 1.0}});
 
-        rotation = rotation.transpose();
-        RealVector globalPosition = rotation.operate(relativePosition).mapMultiply(-1);
+//        RealVector position = new ArrayRealVector(new double[]{translate.getX(), translate.getY(), translate.getZ()});
 
-        extrinsic = new Array2DRowRealMatrix(3, 4);
-        extrinsic.setSubMatrix(rotation.getData(), 0, 0);
-        extrinsic.setColumnVector(3, globalPosition);
+        extrinsic = MatrixUtils.createRealMatrix(new double[][]
+                {{transform.getMxx(), transform.getMxy(), transform.getMxz(), transform.getTx()},
+                        {transform.getMyx(), transform.getMyy(), transform.getMyz(), transform.getTy()},
+                        {transform.getMzx(), transform.getMzy(), transform.getMzz(), transform.getTz()}});
+
+//        extrinsic = new Array2DRowRealMatrix(3, 4);
+//        extrinsic.setSubMatrix(rotation.getData(), 0, 0);
+//        extrinsic.setColumnVector(3, position);
+        System.out.println(extrinsic);
     }
 
     public RealVector projectPoint(RealVector pt) {
