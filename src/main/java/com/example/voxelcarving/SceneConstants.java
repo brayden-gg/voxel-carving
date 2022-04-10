@@ -7,7 +7,7 @@ public final class SceneConstants {
     public static final String FOLDER = "src/main/resources/" + DATASET + "/";
 
     // should be adjusted depending
-    public static final double TOLORANCE = 0.5;
+    public static final double THRESHOLD = 0.5;
 
     // for images with transparent background, prevents transparent voxels from being shown
     public static final double MIN_TRANSPARENCY = 0.5;

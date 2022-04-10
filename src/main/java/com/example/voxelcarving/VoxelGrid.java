@@ -170,7 +170,7 @@ public class VoxelGrid {
 
         double stdDev = Math.sqrt(sumDistance / foundColors.size());
 
-        if (stdDev < SceneConstants.TOLORANCE && avgCol.getEntry(3) > SceneConstants.MIN_TRANSPARENCY){
+        if (stdDev < SceneConstants.THRESHOLD && avgCol.getEntry(3) > SceneConstants.MIN_TRANSPARENCY){
             return new Voxel(true, Color.color(avgCol.getEntry(0), avgCol.getEntry(1), avgCol.getEntry(2), avgCol.getEntry(3)));
         }
 
