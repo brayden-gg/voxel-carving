@@ -11,73 +11,60 @@ import javafx.scene.shape.Box;
 import javafx.scene.*;
 import javafx.scene.shape.CullFace;
 import javafx.scene.transform.Rotate;
-import javafx.scene.transform.Transform;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 
-public class VoxelGrid { // conatiner for voxels
-    private int res;
-    private double size;
+import static com.example.voxelcarving.SceneConstants.RES;
+import static com.example.voxelcarving.SceneConstants.SIZE;
+
+// a container for all the voxels
+public class VoxelGrid {
     private Voxel[][][] grid;
 
-    public VoxelGrid(int res, double size, Voxel[][][] grid){
-        this.res = res;
-        this.size = size;
+    public VoxelGrid(Voxel[][][] grid){
         this.grid = grid;
     }
 
-    public VoxelGrid(int res, double size) {
-        this(res, size, new Voxel[res][res][res]);
-        for (int i = 0; i < res; i++) {
-            for (int j = 0; j < res; j++) {
-                for (int k = 0; k < res; k++) {
-                    this.grid[i][j][k] = new Voxel(false, Color.rgb(i * 255/res, j * 255/res, k * 255/res, 0.3));
+    public VoxelGrid() {
+        this(new Voxel[RES][RES][RES]);
+
+        // fill in grid with empty voxels
+        for (int i = 0; i < RES; i++) {
+            for (int j = 0; j < RES; j++) {
+                for (int k = 0; k < RES; k++) {
+                    this.grid[i][j][k] = new Voxel(false, Color.BLACK);
                 }
             }
         }
 
     }
 
+    // turns indices in the grid into a cube in the world space
     private Box getCube(int i, int j, int k){
-        Box box = new Box(size, size, size);
-        box.setTranslateX(i * size - size * res/2.0);
-        box.setTranslateY(j * size - size * res/2.0);
-        box.setTranslateZ(k * size - size * res/2.0);
+        Box box = new Box(SIZE, SIZE, SIZE);
+        box.setTranslateX(i * SIZE - SIZE * RES/2.0);
+        box.setTranslateY(j * SIZE - SIZE * RES/2.0);
+        box.setTranslateZ(k * SIZE - SIZE * RES/2.0);
 
         PhongMaterial material = new PhongMaterial(this.grid[i][j][k].getColor());
         box.setMaterial(material);
         return box;
     }
 
+    // creates cubes from voxels and adds them to the grid
     public void addAllToGroup(Group group) {
         List<Node> children = group.getChildren();
         children.clear();
-        for (int i = 0; i < res; i++) {
-            for (int j = 0; j < res; j++) {
-                for (int k = 0; k < res; k++) {
+        for (int i = 0; i < RES; i++) {
+            for (int j = 0; j < RES; j++) {
+                for (int k = 0; k < RES; k++) {
                     if (this.grid[i][j][k].getFilled()) {
                         children.add(this.getCube(i, j, k));
                     }
-                }
-            }
-        }
-    }
-
-    public void castRays(ArrayList<Ray> rays) { // fills in only boxes touched by rays
-        for (int i = 0; i < res; i++) {
-            for (int j = 0; j < res; j++) {
-                for (int k = 0; k < res; k++) {
-                    boolean hit = false;
-                    Box cube = this.getCube(i, j, k);
-                    for (Ray ray : rays){
-                        hit = hit || ray.intersects(cube);
-                    }
-                    this.grid[i][j][k].setFilled(hit && this.grid[i][j][k].getFilled());
                 }
             }
         }
@@ -89,22 +76,27 @@ public class VoxelGrid { // conatiner for voxels
         PixelReader[] pixels = new PixelReader[planes.size()];
 
         for (int i = 0; i < planes.size(); i++) {
-            ImagePlane imagePlane = planes.get(i);
-            Box plane = imagePlane.plane;
-            PhongMaterial material = (PhongMaterial) plane.getMaterial();
-            Image image = material.getDiffuseMap();
+            Box plane = planes.get(i).plane;
+            Image image = planes.get(i).image;
             images[i] = image;
             pixels[i] = image.getPixelReader();
 
-            projectors[i] = new Projector(0, 0, -imagePlane.r,
-                    -imagePlane.phi * Math.PI / 180, -imagePlane.theta * Math.PI / 180, Math.PI,
+            double rotationAngle = plane.getRotate() / 180.0 * Math.PI;
+
+            RealVector position = new ArrayRealVector(new double[]{plane.getTranslateX(), plane.getTranslateY(), plane.getTranslateZ()});
+            Rotate rotate = new Rotate(plane.getRotate(), plane.getRotationAxis());
+            RealMatrix rotation = MatrixUtils.createRealMatrix(new double[][]
+                    {{rotate.getMxx(), rotate.getMxy(), rotate.getMxz()},
+                    {rotate.getMyx(), rotate.getMyy(), rotate.getMyz()},
+                    {rotate.getMzx(), rotate.getMzy(), rotate.getMzz()}});
+            projectors[i] = new Projector(position, rotation,
                     image.getWidth() / 2, image.getHeight() / 2,
                     image.getWidth() / 2);
         }
 
-        for (int i = 0; i < res; i++) {
-            for (int j = 0; j < res; j++) {
-                for (int k = 0; k < res; k++) {
+        for (int i = 0; i < RES; i++) {
+            for (int j = 0; j < RES; j++) {
+                for (int k = 0; k < RES; k++) {
                     Box cube = this.getCube(i, j, k);
                     RealVector[] worldPoints = new RealVector[images.length];
 
@@ -122,8 +114,11 @@ public class VoxelGrid { // conatiner for voxels
         }
     }
 
+    // find the average colored voxel of the matched colors,
+    // if the standard deviation of the matched colors is below a threshold, return it
+    // otherwise, return a
     public Voxel getCorrelation(Image[] images, PixelReader[] pixels, RealVector[] worldPoints, Projector[] projectors) {
-        ArrayList<Color> foundColors = new ArrayList<Color>();
+        ArrayList<Color> foundColors = new ArrayList<>();
 //        ArrayList<RealVector> foundDescriptors = new ArrayList<RealVector>();
         for (int i = 0; i < images.length; i++){
             RealVector projectedPoint = projectors[i].projectPoint(worldPoints[i]);
@@ -134,12 +129,16 @@ public class VoxelGrid { // conatiner for voxels
             if (x < images[i].getWidth() && x >= 0 && y < images[i].getHeight() && y >= 0){ // in FOV of image
                 foundColors.add(pixels[i].getColor(x, y));
 //                foundDescriptors.add(getHOG(pixels[i], x, y));
+            } else {
+//                return new Voxel(false, Color.TRANSPARENT);
+                foundColors.add(Color.TRANSPARENT);
             }
         }
 
-//        if (foundColors.size() < 2){
-//            return new Voxel(false, Color.TRANSPARENT);
-//        }
+
+        if (foundColors.size() < 2){
+            return new Voxel(false, Color.TRANSPARENT);
+        }
 
 
         RealVector avgCol = new ArrayRealVector(4);
@@ -157,21 +156,21 @@ public class VoxelGrid { // conatiner for voxels
         avgCol = avgCol.mapDivide(foundColors.size());
 //        avgDescriptor = avgDescriptor.mapDivide(foundColors.size());
 
-        double avgDistance = 0;
+        double sumDistance = 0;
         for (int i = 0; i < foundColors.size(); i++){
             RealVector colVec = new ArrayRealVector(new double[]{
                     foundColors.get(i).getRed(),
                     foundColors.get(i).getGreen(),
                     foundColors.get(i).getBlue(),
                     foundColors.get(i).getOpacity()});
-
-            avgDistance += avgCol.getDistance(colVec);
+            double distance = avgCol.getDistance(colVec);
+            sumDistance += distance * distance;
 //            avgDistance += foundDescriptors.get(i).getDistance(avgDescriptor);
         }
 
-        avgDistance /= foundColors.size();
+        double stdDev = Math.sqrt(sumDistance / foundColors.size());
 
-        if (avgDistance < SceneConstants.TOLORANCE){
+        if (stdDev < SceneConstants.TOLORANCE && avgCol.getEntry(3) > SceneConstants.MIN_TRANSPARENCY){
             return new Voxel(true, Color.color(avgCol.getEntry(0), avgCol.getEntry(1), avgCol.getEntry(2), avgCol.getEntry(3)));
         }
 
@@ -179,12 +178,11 @@ public class VoxelGrid { // conatiner for voxels
 
     }
 
-    // was an interesting idea but did not work at all
+//   this was an interesting idea but did not work at all
     private RealVector getHOG(PixelReader pixels, int x, int y){
         int sz = 4;
         double[] mags = new double[sz * sz];
         double[] dirs = new double[sz * sz];
-
 
         int startX = x - x % sz;
         int startY = y - y % sz;
@@ -216,7 +214,6 @@ public class VoxelGrid { // conatiner for voxels
 
         return new ArrayRealVector(bins);
     }
-
 
 
 }

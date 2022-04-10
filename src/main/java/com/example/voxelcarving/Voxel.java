@@ -2,6 +2,7 @@ package com.example.voxelcarving;
 
 import javafx.scene.paint.Color;
 
+// stores information about the current voxel in the grid
 public class Voxel {
     private Color col;
     private boolean filled;

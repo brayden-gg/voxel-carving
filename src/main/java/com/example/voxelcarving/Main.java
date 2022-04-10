@@ -32,6 +32,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main extends Application {
 
@@ -58,7 +60,7 @@ public class Main extends Application {
         Group group = new Group();
         group.translateXProperty().set(SceneConstants.WIDTH / 2.0);
         group.translateYProperty().set(SceneConstants.HEIGHT / 2.0);
-        group.translateZProperty().set(SceneConstants.IMAGE_DIST);
+        group.translateZProperty().set(0);
 
         PerspectiveCamera camera = new PerspectiveCamera();
 
@@ -66,74 +68,36 @@ public class Main extends Application {
         scene.setFill(Color.BLUE);
         scene.setCamera(camera);
 
-
         ArrayList<ImagePlane> images = new ArrayList<ImagePlane>();
-        ImagePlane leftImage = new ImagePlane(SceneConstants.FOLDER + "/left.png", -90, 0);
-//        leftImage.setTranslateX(-100);
-//        leftImage.setRotationAxis(new Point3D(0, 1, 0));
-//        leftImage.setRotate(90);
-        images.add(leftImage);
+        File f = new File(SceneConstants.FOLDER);
+        String[] fileNames = f.list();
 
-        ImagePlane frontLeftImage = new ImagePlane(SceneConstants.FOLDER + "/front-left.png", -45, 0);
-//        frontLeftImage.setTranslateX(-100 * Math.sqrt(2) / 2);
-//        frontLeftImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
-//        frontLeftImage.setRotationAxis(new Point3D(0, 1, 0));
-//        frontLeftImage.setRotate(45);
-        images.add(frontLeftImage);
+        if (fileNames == null){
+            throw new NullPointerException("No files were found!");
+        }
 
-        ImagePlane frontImage = new ImagePlane(SceneConstants.FOLDER + "/front.png", 0, 0);
-//        frontImage.setTranslateZ(-100);
-        images.add(frontImage);
+        // create image planes for all the images and position them based on filenames
+        for (String fileName : fileNames){
+            // file names should be formatted YOURFILENAME_THETA_PHI.XYZ and use commas instead of dots for decimals
+            // ex: teapot_45_22,5.png
+            Pattern regex = Pattern.compile(".*_(-?\\d+,?\\d*)_(-?\\d+,?\\d*).*");
+            Matcher matcher = regex.matcher(fileName);
 
-        ImagePlane frontRightImage = new ImagePlane(SceneConstants.FOLDER + "/front-right.png", 45, 0);
-//        frontRightImage.setTranslateX(100 * Math.sqrt(2) / 2);
-//        frontRightImage.setTranslateZ(-100 * Math.sqrt(2) / 2);
-//        frontRightImage.setRotationAxis(new Point3D(0, 1, 0));
-//        frontRightImage.setRotate(-45);
-        images.add(frontRightImage);
+            if (!matcher.find()){ // file is formatted incorrectly, skip it
+                continue;
+            }
 
-        ImagePlane rightImage = new ImagePlane(SceneConstants.FOLDER + "/right.png", 90, 0);
-//        rightImage.setTranslateX(100);
-//        rightImage.setRotationAxis(new Point3D(0, 1, 0));
-//        rightImage.setRotate(-90);
-        images.add(rightImage);
-
-        ImagePlane frontTopImage = new ImagePlane(SceneConstants.FOLDER + "/front-top.png", 0, 22.5);
-//        frontTopImage.setTranslateZ(-100 * Math.cos(Math.PI / 8));
-//        frontTopImage.setTranslateY(-100 * Math.sin(Math.PI / 8));
-//        frontTopImage.setRotationAxis(new Point3D(1, 0, 0));
-//        frontTopImage.setRotate(-22.5);
-        images.add(frontTopImage);
-
-        ImagePlane topImage = new ImagePlane(SceneConstants.FOLDER + "/top.png", 0, 45);
-//        topImage.setTranslateZ(-100 * Math.cos(Math.PI / 4));
-//        topImage.setTranslateY(-100 * Math.sin(Math.PI / 4));
-//        topImage.setRotationAxis(new Point3D(1, 0, 0));
-//        topImage.setRotate(-45);
-        images.add(topImage);
+            double theta = Double.parseDouble(matcher.group(1).replace(',', '.'));
+            double phi = Double.parseDouble(matcher.group(2).replace(',', '.'));
+            ImagePlane imagePlane = new ImagePlane(fileName, theta, phi);
+            images.add(imagePlane);
+        }
 
 
-        VoxelGrid voxels = new VoxelGrid(SceneConstants.RES, SceneConstants.SIZE);
+        VoxelGrid voxels = new VoxelGrid();
 
-        calculateVoxels(scene, group, images, voxels);
-
-//        scene.setOnMouseMoved(event -> {
-//            double mouseX = event.getSceneX() - WIDTH / 2;
-//            double mouseY = event.getSceneY() - WIDTH / 2;
-//            image.setTranslateX(mouseX);
-//            image.setTranslateZ(mouseY);
-//            System.out.println(mouseX + ", " + mouseY);
-////            double theta = mouseX;
-////            image.setTranslateX(Math.cos(theta / 180.0 * Math.PI) * mouseY);
-////            image.setTranslateZ(Math.sin(-theta / 180.0 * Math.PI) * mouseY);
-////            image.setRotationAxis(new Point3D(0, 1, 0));
-////            image.setRotate(theta - 90);
-//            calculateVoxels(scene, group, image, voxels);
-//        });
-
-
-
-        handleMouseDrag(group, scene, primaryStage);
+        calculateVoxels(group, images, voxels);
+        handleMouseDrag(group, scene);
 
         primaryStage.setScene(scene);
         primaryStage.setTitle("Voxel Carving");
@@ -141,42 +105,26 @@ public class Main extends Application {
         primaryStage.show();
     }
 
-
-
-    private void calculateVoxels(Scene scene, Group group, ArrayList<ImagePlane> images, VoxelGrid voxels) {
+    // uses the images to fill in the VoxelGrid based on the correlation between images
+    private void calculateVoxels(Group group, ArrayList<ImagePlane> images, VoxelGrid voxels) {
         Group voxelGroup = new Group();
-//        ArrayList<Ray> im1Rays = new ArrayList<Ray>();
-//        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
-//            for(int r = 0; r < 30; r += 5){
-//                im1Rays.add(new Ray(r * Math.cos(theta), r * Math.sin(theta), 0, 0, 0, 1));
-//            }
-//        }
-//
-//        ArrayList<Ray> im2Rays = new ArrayList<Ray>();
-//        for (double theta = 0; theta < Math.PI * 2; theta += 0.2){
-//            for(int r = 0; r < 30; r += 5){
-//                im2Rays.add(new Ray(-50, r * Math.sin(theta), r * Math.cos(theta), 1, 0, 0));
-//            }
-//        }
 
-
-//        voxels.castRays(im1Rays);
-//        voxels.castRays(im2Rays);
         voxels.correlateVoxels(images);
         voxels.addAllToGroup(voxelGroup);
 
-
-
         group.getChildren().clear();
 
-        for (ImagePlane image : images) {
-            group.getChildren().add(image.plane);
+        if (SceneConstants.SHOW_IMAGES) { // optionally show the images as well
+            for (ImagePlane image : images) {
+                group.getChildren().add(image.plane);
+            }
         }
-        group.getChildren().add(voxelGroup);
 
+        group.getChildren().add(voxelGroup);
     }
 
-    void handleMouseDrag(Group group, Scene scene, Stage stage){
+    // allows the user to rotate the view by dragging the mouse
+    void handleMouseDrag(Group group, Scene scene){
         Rotate xRotate = new Rotate(0, Rotate.X_AXIS);
         Rotate yRotate = new Rotate(0, Rotate.Y_AXIS);
         group.getTransforms().addAll(xRotate, yRotate);
