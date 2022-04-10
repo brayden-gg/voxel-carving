@@ -81,12 +81,11 @@ public class VoxelGrid {
             images[i] = image;
             pixels[i] = image.getPixelReader();
 
-            double rotationAngle = plane.getRotate() / 180.0 * Math.PI;
-
+            // align projector with position and rotation of image plane
             RealVector position = new ArrayRealVector(new double[]{plane.getTranslateX(), plane.getTranslateY(), plane.getTranslateZ()});
             Rotate rotate = new Rotate(plane.getRotate(), plane.getRotationAxis());
-            RealMatrix rotation = MatrixUtils.createRealMatrix(new double[][]
-                    {{rotate.getMxx(), rotate.getMxy(), rotate.getMxz()},
+            RealMatrix rotation = MatrixUtils.createRealMatrix(new double[][]{
+                    {rotate.getMxx(), rotate.getMxy(), rotate.getMxz()},
                     {rotate.getMyx(), rotate.getMyy(), rotate.getMyz()},
                     {rotate.getMzx(), rotate.getMzy(), rotate.getMzz()}});
             projectors[i] = new Projector(position, rotation,
@@ -108,7 +107,6 @@ public class VoxelGrid {
                     }
 
                     this.grid[i][j][k] = getCorrelation(images, pixels, worldPoints, projectors);
-
                 }
             }
         }
@@ -118,8 +116,7 @@ public class VoxelGrid {
     // if the standard deviation of the matched colors is below a threshold, return it
     // otherwise, return a
     public Voxel getCorrelation(Image[] images, PixelReader[] pixels, RealVector[] worldPoints, Projector[] projectors) {
-        ArrayList<Color> foundColors = new ArrayList<>();
-//        ArrayList<RealVector> foundDescriptors = new ArrayList<RealVector>();
+        ArrayList<RealVector> foundDescriptors = new ArrayList<RealVector>();
         for (int i = 0; i < images.length; i++){
             RealVector projectedPoint = projectors[i].projectPoint(worldPoints[i]);
 
@@ -127,58 +124,52 @@ public class VoxelGrid {
             int y = (int) Math.round(projectedPoint.getEntry(1));
 
             if (x < images[i].getWidth() && x >= 0 && y < images[i].getHeight() && y >= 0){ // in FOV of image
-                foundColors.add(pixels[i].getColor(x, y));
-//                foundDescriptors.add(getHOG(pixels[i], x, y));
+                foundDescriptors.add(getDescriptor(pixels[i], x, y));
             } else {
-//                return new Voxel(false, Color.TRANSPARENT);
-                foundColors.add(Color.TRANSPARENT);
+                foundDescriptors.add(new ArrayRealVector(4));
             }
         }
 
 
-        if (foundColors.size() < 2){
+        if (foundDescriptors.size() < 2){
             return new Voxel(false, Color.TRANSPARENT);
         }
 
 
-        RealVector avgCol = new ArrayRealVector(4);
-//        RealVector avgDescriptor = new ArrayRealVector(8);
-        for (int i = 0; i < foundColors.size(); i++){
-            avgCol = avgCol.add(new ArrayRealVector(new double[]{
-                    foundColors.get(i).getRed(),
-                    foundColors.get(i).getGreen(),
-                    foundColors.get(i).getBlue(),
-                    foundColors.get(i).getOpacity()}));
-
-//            avgDescriptor = avgDescriptor.add(foundDescriptors.get(i));
+        RealVector avgDescriptor = new ArrayRealVector(4);
+        for (int i = 0; i < foundDescriptors.size(); i++){
+            avgDescriptor = avgDescriptor.add(foundDescriptors.get(i));
         }
 
-        avgCol = avgCol.mapDivide(foundColors.size());
-//        avgDescriptor = avgDescriptor.mapDivide(foundColors.size());
+        avgDescriptor = avgDescriptor.mapDivide(foundDescriptors.size());
 
         double sumDistance = 0;
-        for (int i = 0; i < foundColors.size(); i++){
-            RealVector colVec = new ArrayRealVector(new double[]{
-                    foundColors.get(i).getRed(),
-                    foundColors.get(i).getGreen(),
-                    foundColors.get(i).getBlue(),
-                    foundColors.get(i).getOpacity()});
-            double distance = avgCol.getDistance(colVec);
+        for (int i = 0; i < foundDescriptors.size(); i++){
+            double distance = avgDescriptor.getDistance(foundDescriptors.get(i));
             sumDistance += distance * distance;
-//            avgDistance += foundDescriptors.get(i).getDistance(avgDescriptor);
         }
 
-        double stdDev = Math.sqrt(sumDistance / foundColors.size());
+        double stdDev = Math.sqrt(sumDistance / foundDescriptors.size());
 
-        if (stdDev < SceneConstants.THRESHOLD && avgCol.getEntry(3) > SceneConstants.MIN_TRANSPARENCY){
-            return new Voxel(true, Color.color(avgCol.getEntry(0), avgCol.getEntry(1), avgCol.getEntry(2), avgCol.getEntry(3)));
+        if (stdDev < SceneConstants.THRESHOLD && avgDescriptor.getEntry(3) > SceneConstants.MIN_TRANSPARENCY){
+            return new Voxel(true, Color.color(
+                    avgDescriptor.getEntry(0),
+                    avgDescriptor.getEntry(1),
+                    avgDescriptor.getEntry(2),
+                    avgDescriptor.getEntry(3)));
         }
 
         return new Voxel(false, Color.TRANSPARENT);
 
     }
 
-//   this was an interesting idea but did not work at all
+    // currently just the color of the image at the point but could use some other descriptor
+    private RealVector getDescriptor(PixelReader pixels, int x, int y){
+        Color col = pixels.getColor(x, y);
+        return new ArrayRealVector(new double[]{col.getRed(), col.getGreen(), col.getGreen(), col.getOpacity()});
+    }
+
+    // this was an interesting idea but did not work at all, implementation might also be buggy
     private RealVector getHOG(PixelReader pixels, int x, int y){
         int sz = 4;
         double[] mags = new double[sz * sz];
