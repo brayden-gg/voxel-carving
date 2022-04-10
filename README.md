@@ -47,18 +47,27 @@ Many of these images had transparent backgounds that helped reduce confusion wit
 background objects. We can see how in the 4th image, the triceratops is not as accurate as pervious image because
 the pixels in the background are somewhat similar to the pixels of the desired object.
 
-<img src="./images/plane-result.png" width="49%" style="float:left"/>
-<img src="./src/main/resources/plane/plane0001_-45_22,5.png" width="49%" style="float:left"/>
-
-<img src="./images/teapot-result.png" width="49%" style="float:left"/>
-<img src="./src/main/resources/teapot/teapot0001_135_0.png" width="49%" style="float:left"/>
-
-<img src="./images/triceratops-alpha-result.png" width="49%" style="float:left"/>
-<img src="./src/main/resources/triceratops-alpha/triceratops0001_90_0.png" width="49%" style="float:left"/>
-
-<img src="./images/triceratops-result.png" width="49%" style="float:left"/>
-<img src="./src/main/resources/triceratops/triceratops0001_90_0.png" width="49%" style="float:left"/>
-
+<table>
+  <table>
+<tr>
+<td>Image from dataset</td>
+<td>Outputted 3D Shape</td>
+</tr>
+<tr>
+    <td><img src="./src/main/resources/plane/plane0001_-45_22,5.png" width="540px"/></td>
+<td><img src="./images/plane-result.png" width="540px"/></td>
+</tr>
+<tr>
+    <td><img src="./src/main/resources/teapot/teapot0001_135_0.png" width="540px"/></td>
+ <td><img src="./images/teapot-result.png" width="540px"/></td>
+</tr>
+    <td><img src="./src/main/resources/triceratops-alpha/triceratops0001_90_0.png" wwidth="540px" /></td>
+<td><img src="./images/triceratops-alpha-result.png" width="540px" /></td>
+<tr>
+    <td><img src="./src/main/resources/triceratops/triceratops0001_90_0.png" width="540px" /></td>
+<td><img src="./images/triceratops-result.png" width="540px" /></td>
+</tr>
+</table>
 ## Future improvements:
 
 One idea I tried was to use HOG descriptors rather than just the color information of the image. However, this gave very
